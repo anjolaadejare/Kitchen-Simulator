@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .main-area {
+            flex: 2;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .main-area h1 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #f5f5f5;
+            display: block;
+        }
+
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .stat-value {
+            color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .pause-btn {
+            width: 100%;
+            padding: 10px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .pause-btn.paused {
+            background: #4caf50;
+        }
+
+        .order-item {
+            background: #e8f5e9;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 5px;
+            font-size: 13px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .scroll-area {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .scroll-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .achievement {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            border: 2px solid #ffb300;
+            text-align: center;
+            opacity: 0.5;
+        }
+
+        .achievement.unlocked {
+            background: linear-gradient(135deg, #4caf50, #66bb6a);
+            border-color: #2e7d32;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="main-area">
+            <h1>🍳 Kitchen Simulator</h1>
+            <canvas id="gameCanvas" width="900" height="600"></canvas>
+            <button class="pause-btn" id="pauseBtn">⏸️ Pause</button>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <h2>💰 Money & Stats</h2>
+                <div class="stat">
+                    <span>Money:</span>
+                    <span class="stat-value">$<span id="money">500</span></span>
+                </div>
+                <div class="stat">
+                    <span>Served:</span>
+                    <span class="stat-value"><span id="served">0</span></span>
+                </div>
+                <div class="stat">
+                    <span>Rep:</span>
+                    <span class="stat-value"><span id="rep">50</span>%</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🍽️ Cook Food</h2>
+                <button class="btn" id="cookBurger">🍔 Burger - $8</button>
+                <button class="btn" id="cookPizza">🍕 Pizza - $10</button>
+                <button class="btn" id="cookPasta">🍝 Pasta - $9</button>
+                <button class="btn" id="cookSalad">🥗 Salad - $7</button>
+                <button class="btn" id="cookSteak">🥩 Steak - $15</button>
+                <button class="btn" id="cookSushi">🍣 Sushi - $12</button>
+                <button class="btn" id="cookIceCream">🍦 Ice Cream - $6</button>
+                <button class="btn" id="cookCoffee">☕ Coffee - $4</button>
+            </div>
+
+            <div class="panel">
+                <h2>🍳 Cooking Now</h2>
+                <div class="scroll-area" id="cookingList">
+                    <p style="color: #999; text-align: center;">No items cooking</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>✅ Ready Orders</h2>
+                <div class="scroll-area" id="readyList">
+                    <p style="color: #999; text-align: center;">No ready orders</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>👥 Waiting Customers</h2>
+                <div class="scroll-area" id="customerList">
+                    <p style="color: #999; text-align: center;">No customers waiting</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🎉 This Week's Event</h2>
+                <div id="eventDisplay" style="text-align: center; padding: 10px; background: #fff3e0; border-radius: 5px; margin-bottom: 10px; font-weight: bold; min-height: 40px;">
+                    Loading event...
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>⬆️ Upgrades</h2>
+                <button class="btn" id="upgradeSpeed">
+                    ⚡ Faster Cooking<br><small>$100</small>
+                </button>
+                <button class="btn" id="upgradeStations">
+                    🍳 More Stations<br><small>$150</small>
+                </button>
+                <button class="btn" id="upgradeQuality">
+                    ⭐ Better Quality<br><small>$200</small>
+                </button>
+                <button class="btn" id="upgradeService">
+                    🧑‍💼 Faster Service<br><small>$120</small>
+                </button>
+                <button class="btn" id="upgradeReputation">
+                    📈 Reputation Boost<br><small>$250</small>
+                </button>
+            </div>
+
+            <div class="panel">
+                <h2>🏆 Achievements</h2>
+                <div class="scroll-area" id="achievementsList">
+                    <div class="achievement" id="firstCustomer">🎉 First Customer Served!</div>
+                    <div class="achievement" id="hundredServed">💯 100 Customers Served!</div>
+                    <div class="achievement" id="millionaire">💰 Earn $1,000!</div>
+                    <div class="achievement" id="perfectRep">⭐ Perfect Reputation!</div>
+                    <div class="achievement" id="speedMaster">⚡ Cooking Speed Level 5!</div>
+                    <div class="achievement" id="stationMaster">🍳 6 Cooking Stations!</div>
+                    <div class="achievement" id="qualityMaster">⭐ Quality Level 5!</div>
+                    <div class="achievement" id="busyKitchen">🏃‍♂️ 10 Customers Waiting!</div>
+                    <div class="achievement" id="serviceMaster">🧑‍💼 Service Level 3!</div>
+                    <div class="achievement" id="repMaster">📈 Reputation Boost Level 3!</div>
+                    <div class="achievement" id="foodVariety">🍽️ Cook All Food Types!</div>
+                    <div class="achievement" id="kitchenEmpire">👑 Kitchen Empire (All Upgrades)!</div>
+                    <div class="achievement" id="patientMaster">⏰ Keep 5 Customers Happy!</div>
+                    <div class="achievement" id="speedRunner">⚡ Serve 50 Customers in 5 Minutes!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        const game = {
+            money: 500,
+            served: 0,
+            reputation: 50,
+            isPaused: false,
+            time: 0,
+            
+            // Cooking
+            cookingOrders: [],
+            readyOrders: [],
+            customerQueue: [],
+            
+            // Customer spawning
+            customerSpawnRate: 5000, // milliseconds between customer spawns
+            lastCustomerTime: -5000, // Start with a customer spawning immediately
+            
+            // Upgrades
+            cookSpeedLevel: 1,
+            stationsCount: 3,
+            qualityLevel: 1,
+            serviceLevel: 1,
+            reputationBoost: 1,
+            
+            // Achievements
+            achievements: {
+                firstCustomer: false,
+                hundredServed: false,
+                millionaire: false,
+                perfectRep: false,
+                speedMaster: false,
+                stationMaster: false,
+                qualityMaster: false,
+                busyKitchen: false,
+                serviceMaster: false,
+                repMaster: false, 
+                foodVariety: false,
+                kitchenEmpire: false,
+                patientMaster: false,
+                speedRunner: false
+            },
+            
+            // Achievement tracking
+            foodsCooked: new Set(),
+            startTime: Date.now(),
+            servedInFiveMinutes: 0,
+
+            // Events
+            activeEvents: [],
+            eventCooldown: 0,
+            lastEventTime: 0,
+            currentEvent: null,
+            eventStartTime: 0,
+            eventChangeInterval: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        };
+
+        // Event definitions
+        const events = [
+            {
+                name: '💰 Double Dollars',
+                emoji: '💰',
+                description: 'Earn double money on all orders!',
+                effect: (order, customer, price) => price * 2
+            },
+            {
+                name: '⚡ Speed Boost',
+                emoji: '⚡',
+                description: 'Cooking 30% faster this week!',
+                cookSpeedMultiplier: 1.3
+            },
+            {
+                name: '👥 Customer Rush',
+                emoji: '👥',
+                description: 'Double the customers arrive!',
+                customerSpawnMultiplier: 2.0
+            },
+            {
+                name: '🎯 Perfect Precision',
+                emoji: '🎯',
+                description: 'Customers are 50% more patient!',
+                patienceMultiplier: 1.5
+            },
+            {
+                name: '⭐ Quality Matters',
+                emoji: '⭐',
+                description: 'Quality multiplier increased by 50%!',
+                qualityMultiplier: 1.5
+            },
+            {
+                name: '📈 Reputation Surge',
+                emoji: '📈',
+                description: 'Gain 2x reputation bonuses!',
+                reputationMultiplier: 2.0
+            },
+            {
+                name: '🍔 Food Festival',
+                emoji: '🍔',
+                description: 'All food prices increased by 30%!',
+                priceMultiplier: 1.3
+            },
+            {
+                name: '🎁 Discount Week',
+                emoji: '🎁',
+                description: 'Customers pay 20% less (but more arrive)!',
+                priceMultiplier: 0.8,
+                customerSpawnMultiplier: 1.5
+            },
+            {
+                name: '🔥 Hot Streak',
+                emoji: '🔥',
+                description: 'Everything is 20% better!',
+                cookSpeedMultiplier: 1.2,
+                priceMultiplier: 1.2,
+                reputationMultiplier: 1.2
+            },
+            {
+                name: '💎 Premium Service',
+                emoji: '💎',
+                description: 'High-quality orders worth 50% more!',
+                premiumMode: true
+            }
+        ];
+
+        // Food data
+        const foods = {
+            burger: { name: 'Burger', emoji: '🍔', cookTime: 5000, price: 8 },
+            pizza: { name: 'Pizza', emoji: '🍕', cookTime: 7000, price: 10 },
+            pasta: { name: 'Pasta', emoji: '🍝', cookTime: 6000, price: 9 },
+            salad: { name: 'Salad', emoji: '🥗', cookTime: 3000, price: 7 },
+            steak: { name: 'Steak', emoji: '🥩', cookTime: 10000, price: 15 },
+            sushi: { name: 'Sushi', emoji: '🍣', cookTime: 8000, price: 12 },
+            iceCream: { name: 'Ice Cream', emoji: '🍦', cookTime: 2000, price: 6 },
+            coffee: { name: 'Coffee', emoji: '☕', cookTime: 1000, price: 4 }
+        };
+
+        // Order class
+        class Order {
+            constructor(foodType) {
+                this.food = foods[foodType];
+                let cookSpeedMultiplier = 1.0;
+                if (game.currentEvent && game.currentEvent.cookSpeedMultiplier) {
+                    cookSpeedMultiplier = game.currentEvent.cookSpeedMultiplier;
+                }
+                this.cookTime = (this.food.cookTime / game.cookSpeedLevel) / cookSpeedMultiplier;
+                this.maxCookTime = this.cookTime;
+                this.progress = 0;
+            }
+
+            update(deltaTime) {
+                this.cookTime -= deltaTime;
+                this.progress = 1 - (this.cookTime / this.maxCookTime);
+                return this.cookTime <= 0;
+            }
+        }
+
+        // Customer class
+        class Customer {
+            constructor() {
+                const foodTypes = Object.keys(foods);
+                this.food = foods[foodTypes[Math.floor(Math.random() * foodTypes.length)]];
+                this.patience = 100;
+                let patienceMultiplier = 1.0;
+                if (game.currentEvent && game.currentEvent.patienceMultiplier) {
+                    patienceMultiplier = game.currentEvent.patienceMultiplier;
+                }
+                this.patience *= patienceMultiplier;
+                this.waitTime = 0;
+            }
+
+            update(deltaTime) {
+                this.waitTime += deltaTime;
+                this.patience = Math.max(0, 100 - (this.waitTime / 15000) * 100);
+            }
+        }
+
+        // Button event listeners
+        document.getElementById('cookBurger').addEventListener('click', () => cookFood('burger'));
+        document.getElementById('cookPizza').addEventListener('click', () => cookFood('pizza'));
+        document.getElementById('cookPasta').addEventListener('click', () => cookFood('pasta'));
+        document.getElementById('cookSalad').addEventListener('click', () => cookFood('salad'));
+        document.getElementById('cookSteak').addEventListener('click', () => cookFood('steak'));
+        document.getElementById('cookSushi').addEventListener('click', () => cookFood('sushi'));
+        document.getElementById('cookIceCream').addEventListener('click', () => cookFood('iceCream'));
+        document.getElementById('cookCoffee').addEventListener('click', () => cookFood('coffee'));
+
+        document.getElementById('upgradeSpeed').addEventListener('click', () => buyUpgrade('speed'));
+        document.getElementById('upgradeStations').addEventListener('click', () => buyUpgrade('stations'));
+        document.getElementById('upgradeQuality').addEventListener('click', () => buyUpgrade('quality'));
+        document.getElementById('upgradeService').addEventListener('click', () => buyUpgrade('service'));
+        document.getElementById('upgradeReputation').addEventListener('click', () => buyUpgrade('reputation'));
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            game.isPaused = !game.isPaused;
+            document.getElementById('pauseBtn').textContent = game.isPaused ? '▶️ Resume' : '⏸️ Pause';
+            document.getElementById('pauseBtn').classList.toggle('paused');
+        });
+
+        // Functions▶
+        function cookFood(foodType) {
+            if (game.cookingOrders.length >= game.stationsCount) {
+                alert('All cooking stations are busy!');
+                return;
+            }
+            game.cookingOrders.push(new Order(foodType));
+            game.foodsCooked.add(foodType);
+            updateUI();
+        }
+
+        function buyUpgrade(type) {
+            const costs = {
+                speed: 100,
+                stations: 150,
+                quality: 200,
+                service: 120,
+                reputation: 250
+            };
+            
+            const cost = costs[type];
+            if (game.money < cost) {
+                alert('Not enough money!');
+                return;
+            }
+            
+            game.money -= cost;
+            
+            switch(type) {
+                case 'speed':
+                    game.cookSpeedLevel = Math.min(3.0, game.cookSpeedLevel + 0.2);
+                    break;
+                case 'stations':
+                    game.stationsCount = Math.min(6, game.stationsCount + 1);
+                    break;
+                case 'quality':
+                    game.qualityLevel = Math.min(5, game.qualityLevel + 1);
+                    break;
+                case 'service':
+                    game.serviceLevel = Math.min(1.5, game.serviceLevel + 0.1);
+                    break;
+                case 'reputation':
+                    game.reputationBoost = Math.min(2.0, game.reputationBoost + 0.1);
+                    break;
+            }
+            
+            updateUI();
+        }
+
+        function selectRandomEvent() {
+            game.currentEvent = events[Math.floor(Math.random() * events.length)];
+            game.eventStartTime = game.time;
+            updateEventDisplay();
+        }
+
+        function updateEventDisplay() {
+            const eventDisplay = document.getElementById('eventDisplay');
+            if (game.currentEvent) {
+                eventDisplay.innerHTML = `${game.currentEvent.emoji}<br>${game.currentEvent.name}<br><small>${game.currentEvent.description}</small>`;
+            }
+        }
+
+        function checkAchievements() {
+            // First customer
+            if (!game.achievements.firstCustomer && game.served >= 1) {
+                game.achievements.firstCustomer = true;
+                showAchievement('🎉 First Customer Served!');
+            }
+            
+            // 100 served
+            if (!game.achievements.hundredServed && game.served >= 100) {
+                game.achievements.hundredServed = true;
+                showAchievement('💯 100 Customers Served!');
+            }
+            
+            // Millionaire
+            if (!game.achievements.millionaire && game.money >= 1000) {
+                game.achievements.millionaire = true;
+                showAchievement('💰 Earn $1,000!');
+            }
+            
+            // Perfect reputation
+            if (!game.achievements.perfectRep && game.reputation >= 100) {
+                game.achievements.perfectRep = true;
+                showAchievement('⭐ Perfect Reputation!');
+            }
+            
+            // Speed master
+            if (!game.achievements.speedMaster && game.cookSpeedLevel >= 2.8) {
+                game.achievements.speedMaster = true;
+                showAchievement('⚡ Cooking Speed Level 5!');
+            }
+            
+            // Station master
+            if (!game.achievements.stationMaster && game.stationsCount >= 6) {
+                game.achievements.stationMaster = true;
+                showAchievement('🍳 6 Cooking Stations!');
+            }
+            
+            // Quality master
+            if (!game.achievements.qualityMaster && game.qualityLevel >= 5) {
+                game.achievements.qualityMaster = true;
+                showAchievement('⭐ Quality Level 5!');
+            }
+            
+            // Busy kitchen
+            if (!game.achievements.busyKitchen && game.customerQueue.length >= 10) {
+                game.achievements.busyKitchen = true;
+                showAchievement('🏃‍♂️ 10 Customers Waiting!');
+            }
+            
+            // Service master
+            if (!game.achievements.serviceMaster && game.serviceLevel >= 1.3) {
+                game.achievements.serviceMaster = true;
+                showAchievement('🧑‍💼 Service Level 3!');
+            }
+            
+            // Reputation master
+            if (!game.achievements.repMaster && game.reputationBoost >= 1.6) {
+                game.achievements.repMaster = true;
+                showAchievement('📈 Reputation Boost Level 3!');
+            }
+            
+            // Food variety
+            if (!game.achievements.foodVariety && game.foodsCooked.size >= 8) {
+                game.achievements.foodVariety = true;
+                showAchievement('🍽️ Cook All Food Types!');
+            }
+            
+            // Kitchen empire
+            if (!game.achievements.kitchenEmpire && 
+                game.cookSpeedLevel >= 2.8 && 
+                game.stationsCount >= 6 && 
+                game.qualityLevel >= 5 && 
+                game.serviceLevel >= 1.3 && 
+                game.reputationBoost >= 1.6) {
+                game.achievements.kitchenEmpire = true;
+                showAchievement('👑 Kitchen Empire (All Upgrades)!');
+            }
+            
+            // Patient master
+            if (!game.achievements.patientMaster) {
+                const happyCustomers = game.customerQueue.filter(c => c.patience > 70).length;
+                if (happyCustomers >= 5) {
+                    game.achievements.patientMaster = true;
+                    showAchievement('⏰ Keep 5 Customers Happy!');
+                }
+            }
+            
+            // Speed runner
+            if (!game.achievements.speedRunner && game.servedInFiveMinutes >= 50) {
+                game.achievements.speedRunner = true;
+                showAchievement('⚡ Serve 50 Customers in 5 Minutes!');
+            }
+        }
+
+        function showAchievement(message) {
+            const achievementDiv = document.createElement('div');
+            achievementDiv.className = 'achievement unlocked';
+            achievementDiv.textContent = message;
+            achievementDiv.style.position = 'fixed';
+            achievementDiv.style.top = '20px';
+            achievementDiv.style.right = '20px';
+            achievementDiv.style.zIndex = '1000';
+            achievementDiv.style.animation = 'slideIn 0.5s ease-out';
+            document.body.appendChild(achievementDiv);
+            
+            setTimeout(() => achievementDiv.remove(), 3000);
+        }
+
+        function updateUI() {
+            document.getElementById('money').textContent = Math.floor(game.money);
+            document.getElementById('served').textContent = game.served;
+            document.getElementById('rep').textContent = Math.floor(game.reputation);
+
+            // Update cooking list
+            const cookingList = document.getElementById('cookingList');
+            if (game.cookingOrders.length > 0) {
+                cookingList.innerHTML = '';
+                game.cookingOrders.forEach((order, i) => {
+                    const item = document.createElement('div');
+                    item.className = 'order-item';
+                    const progressPercent = Math.round(order.progress * 100);
+                    item.innerHTML = `${order.food.emoji} ${order.food.name}<br><small>${progressPercent}% done</small>`;
+                    cookingList.appendChild(item);
+                });
+            } else {
+                cookingList.innerHTML = '<p style="color: #999; text-align: center;">No items cooking</p>';
+            }
+
+            // Update ready list
+            const readyList = document.getElementById('readyList');
+            if (game.readyOrders.length > 0) {
+                readyList.innerHTML = '';
+                game.readyOrders.forEach(order => {
+                    const item = document.createElement('div');
+                    item.className = 'order-item';
+                    item.innerHTML = `✅ ${order.food.emoji} ${order.food.name}`;
+                    readyList.appendChild(item);
+                });
+            } else {
+                readyList.innerHTML = '<p style="color: #999; text-align: center;">No ready orders</p>';
+            }
+
+            // Update customer list
+            const customerList = document.getElementById('customerList');
+            if (game.customerQueue.length > 0) {
+                customerList.innerHTML = '';
+                game.customerQueue.forEach((customer, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'order-item';
+                    const patienceColor = customer.patience > 50 ? '#4caf50' : customer.patience > 20 ? '#ff9800' : '#f44336';
+                    item.innerHTML = `${customer.food.emoji} ${customer.food.name}<br><small style="color: ${patienceColor};">Patience: ${Math.round(customer.patience)}%</small>`;
+                    customerList.appendChild(item);
+                });
+            } else {
+                customerList.innerHTML = '<p style="color: #999; text-align: center;">No customers waiting</p>';
+            }
+
+            // Update achievements
+            Object.keys(game.achievements).forEach(achievement => {
+                const element = document.getElementById(achievement);
+                if (game.achievements[achievement]) {
+                    element.classList.add('unlocked');
+                }
+            });
+
+            // Update upgrade buttons
+            const upgradeButtons = [
+                { id: 'upgradeSpeed', type: 'speed', cost: 100, max: 3.0, current: game.cookSpeedLevel, label: '⚡ Faster Cooking' },
+                { id: 'upgradeStations', type: 'stations', cost: 150, max: 6, current: game.stationsCount, label: '🍳 More Stations' },
+                { id: 'upgradeQuality', type: 'quality', cost: 200, max: 5, current: game.qualityLevel, label: '⭐ Better Quality' },
+                { id: 'upgradeService', type: 'service', cost: 120, max: 1.5, current: game.serviceLevel, label: '🧑‍💼 Faster Service' },
+                { id: 'upgradeReputation', type: 'reputation', cost: 250, max: 2.0, current: game.reputationBoost, label: '📈 Reputation Boost' }
+            ];
+
+            upgradeButtons.forEach(upgrade => {
+                const button = document.getElementById(upgrade.id);
+                const isMaxed = upgrade.current >= upgrade.max;
+                const canAfford = game.money >= upgrade.cost;
+                
+                button.disabled = isMaxed || !canAfford;
+                
+                let levelText = '';
+                if (upgrade.type === 'speed') levelText = ` (Lv.${Math.round((upgrade.current - 1) / 0.2) + 1})`;
+                else if (upgrade.type === 'service' || upgrade.type === 'reputation') levelText = ` (Lv.${Math.round((upgrade.current - 1) / 0.1) + 1})`;
+                else levelText = ` (Lv.${upgrade.current})`;
+                
+                button.innerHTML = `${upgrade.label}${levelText}<br><small>$${upgrade.cost}</small>`;
+            });
+        }
+
+        function update(deltaTime) {
+            if (game.isPaused) return;
+
+            game.time += deltaTime;
+
+            // Initialize event if not set
+            if (!game.currentEvent) {
+                selectRandomEvent();
+            }
+
+            // Change event every week
+            if (game.time - game.eventStartTime > game.eventChangeInterval) {
+                selectRandomEvent();
+            }
+
+            // Update cooking orders
+            for (let i = game.cookingOrders.length - 1; i >= 0; i--) {
+                if (game.cookingOrders[i].update(deltaTime)) {
+                    game.readyOrders.push(game.cookingOrders[i]);
+                    game.cookingOrders.splice(i, 1);
+                }
+            }
+
+            // Spawn customers (with event modifiers)
+            let spawnRateModifier = 1.0;
+            if (game.currentEvent && game.currentEvent.customerSpawnMultiplier) {
+                spawnRateModifier = game.currentEvent.customerSpawnMultiplier;
+            }
+            if (game.time - game.lastCustomerTime > (game.customerSpawnRate / game.serviceLevel) / spawnRateModifier) {
+                game.customerQueue.push(new Customer());
+                game.lastCustomerTime = game.time;
+            }
+
+            // Update customers
+            for (let i = game.customerQueue.length - 1; i >= 0; i--) {
+                game.customerQueue[i].update(deltaTime);
+                if (game.customerQueue[i].patience <= 0) {
+                    game.reputation = Math.max(0, game.reputation - 5);
+                    game.customerQueue.splice(i, 1);
+                }
+            }
+
+            // Auto-serve if ready
+            if (game.readyOrders.length > 0 && game.customerQueue.length > 0) {
+                const order = game.readyOrders.shift();
+                const customer = game.customerQueue.shift();
+                let price = order.food.price * game.qualityLevel;
+                if (customer.patience > 50) price *= 1.2;
+                
+                // Apply event effects
+                if (game.currentEvent) {
+                    if (game.currentEvent.priceMultiplier) {
+                        price *= game.currentEvent.priceMultiplier;
+                    }
+                    if (game.currentEvent.effect) {
+                        price = game.currentEvent.effect(order, customer, price);
+                    }
+                }
+                
+                game.money += price;
+                game.served++;
+                let repGain = 2 * game.reputationBoost;
+                if (game.currentEvent && game.currentEvent.reputationMultiplier) {
+                    repGain *= game.currentEvent.reputationMultiplier;
+                }
+                game.reputation = Math.min(100, game.reputation + repGain);
+                
+                // Track for speed runner achievement
+                const elapsedMinutes = (Date.now() - game.startTime) / 60000;
+                if (elapsedMinutes <= 5) {
+                    game.servedInFiveMinutes++;
+                }
+            }
+
+            updateUI();
+            checkAchievements();
+        }
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw cooking stations
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(20, 20, canvas.width - 40, 150);
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(20, 20, canvas.width - 40, 150);
+
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('🍳 Cooking Stations', 40, 50);
+
+            const stationWidth = Math.min(120, (canvas.width - 80) / game.stationsCount - 10);
+            const stationSpacing = 10;
+            const totalStationWidth = stationWidth + stationSpacing;
+            const startX = (canvas.width - (game.stationsCount * totalStationWidth - stationSpacing)) / 2;
+
+            for (let i = 0; i < game.stationsCount; i++) {
+                const x = startX + i * totalStationWidth;
+                const y = 70;
+
+                ctx.fillStyle = game.cookingOrders[i] ? '#e8f5e9' : '#f0f0f0';
+                ctx.fillRect(x, y, stationWidth, 80);
+                ctx.strokeStyle = '#4caf50';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, stationWidth, 80);
+
+                if (game.cookingOrders[i]) {
+                    const order = game.cookingOrders[i];
+                    ctx.fillStyle = '#333';
+                    ctx.font = '28px Arial';
+                    ctx.fillText(order.food.emoji, x + stationWidth/2 - 14, y + 45);
+
+                    // Progress bar
+                    ctx.fillStyle = '#ddd';
+                    ctx.fillRect(x + 5, y + 55, stationWidth - 10, 10);
+                    ctx.fillStyle = '#4caf50';
+                    ctx.fillRect(x + 5, y + 55, (stationWidth - 10) * order.progress, 10);
+                } else {
+                    ctx.fillStyle = '#999';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('Empty', x + stationWidth/2 - 20, y + 50);
+                }
+            }
+
+            // Draw customer area
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(20, 190, canvas.width - 40, 150);
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(20, 190, canvas.width - 40, 150);
+
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('👥 Customers Waiting', 40, 220);
+
+            // Draw customers
+            for (let i = 0; i < Math.min(game.customerQueue.length, 8); i++) {
+                const customer = game.customerQueue[i];
+                const x = 60 + i * 100;
+                const y = 260;
+
+                // Customer circle
+                ctx.fillStyle = customer.patience > 50 ? '#4caf50' : '#ff9800';
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Food emoji
+                ctx.font = '24px Arial';
+                ctx.fillText(customer.food.emoji, x - 10, y + 10);
+
+                // Patience bar
+                ctx.fillStyle = '#ddd';
+                ctx.fillRect(x - 15, y + 20, 30, 5);
+                ctx.fillStyle = customer.patience > 50 ? '#4caf50' : '#ff9800';
+                ctx.fillRect(x - 15, y + 20, 30 * (customer.patience / 100), 5);
+            }
+
+            // Draw ready orders
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(20, 370, canvas.width - 40, 200);
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(20, 370, canvas.width - 40, 200);
+
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('✅ Ready Orders', 40, 400);
+
+            for (let i = 0; i < Math.min(game.readyOrders.length, 5); i++) {
+                const order = game.readyOrders[i];
+                const x = 60 + i * 140;
+                const y = 430;
+
+                ctx.fillStyle = '#fff8e1';
+                ctx.fillRect(x, y, 120, 100);
+                ctx.strokeStyle = '#ffc107';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, 120, 100);
+
+                ctx.font = '40px Arial';
+                ctx.fillText(order.food.emoji, x + 35, y + 55);
+
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(order.food.name, x + 10, y + 75);
+                ctx.fillText('$' + order.food.price, x + 10, y + 90);
+            }
+
+            // Debug info
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            const debugInfo = `Station: ${game.stationsCount} | Speed: ${game.cookSpeedLevel.toFixed(1)}x | Quality: ${game.qualityLevel} | Service: ${game.serviceLevel.toFixed(1)}x | Rep Boost: ${game.reputationBoost.toFixed(1)}x`;
+            const customerInfo = `Customers: ${game.customerQueue.length} | Next spawn: ${Math.max(0, (game.customerSpawnRate / game.serviceLevel - (game.time - game.lastCustomerTime)) / 1000).toFixed(1)}s`;
+            ctx.fillText(debugInfo, 20, canvas.height - 25);
+            ctx.fillText(customerInfo, 20, canvas.height - 10);
+        }
+
+        // Game loop
+        let lastTime = Date.now();
+        function gameLoop() {
+            const now = Date.now();
+            const deltaTime = now - lastTime;
+            lastTime = now;
+
+            update(deltaTime);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>
